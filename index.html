@@ -50,7 +50,7 @@ table{width:100%;border-collapse:collapse;font-size:12px}td,th{padding:5px 4px;b
   <div class="stats"><div><b id="spnl">0.00</b><span>Profit/Perte</span></div><div><b id="strd">0</b><span>Trades</span></div><div><b id="swr">0%</b><span>Réussite</span></div><div><b id="sstk">0</b><span>Série pertes</span></div></div>
   <div style="margin-top:10px;display:flex;gap:8px"><button id="csv">Export CSV</button><button id="rst">Réinitialiser</button><label style="margin:8px 0 0 auto"><input type="checkbox" id="snd" checked style="width:auto"> Sons</label></div>
  </div>
- <div class="card"><h3>Journal</h3><div class="logw"><table><thead><tr><th>Heure</th><th>Contrat</th><th>Mise</th><th>Résultat</th></tr></thead><tbody id="log"></tbody></table></div></div>
+ <div class="card"><h3>Journal</h3><div class="logw"><table><thead><tr><th>Heure</th><th>Contrat</th><th>Choisi</th><th>Ticks</th><th>Sorti</th><th>Mise</th><th>Résultat</th></tr></thead><tbody id="log"></tbody></table></div></div>
 </div>
 <div>
  <div class="card">
@@ -70,6 +70,13 @@ table{width:100%;border-collapse:collapse;font-size:12px}td,th{padding:5px 4px;b
    <div class="hint">Martingale à 1 = désactivée. La martingale augmente fortement le risque.</div>
   </div>
  </div>
+ <div class="card"><h3>Précision</h3>
+  <div class="row"><div><label>Contrat</label><select id="pc"><option value="over">Over</option><option value="under">Under</option><option value="match">Match</option><option value="differ">Differ</option><option value="accu">Accumulator</option></select></div><div><label>Chiffre</label><input id="pd" type="number" min="0" max="9" value="3"></div></div>
+  <button class="pri" id="pcalc" style="width:100%">Calculer</button><div id="pres" class="hint" style="font-size:13px;color:var(--tx);margin:8px 0"></div>
+  <div style="display:flex;gap:8px"><button class="g" id="parm" disabled style="flex:1">▶ Lancer au tick calculé</button><button id="pstop" disabled>Annuler</button></div>
+  <label style="margin-top:8px"><input type="checkbox" id="prep" style="width:auto"> Répéter automatiquement</label><div id="pst" style="font-weight:700;margin-top:6px"></div>
+  <div class="hint">Utilise la mise et les ticks par trade du panneau ci-dessus. Lancer la précision arrête le bot auto (et inversement).</div>
+ </div>
  <div class="card"><h3>Connexion</h3>
   <label>Client ID (app OAuth créée sur developers.deriv.com)</label><input id="appid" style="width:100%" placeholder="ex. app12345">
   <div class="hint">1) Sur developers.deriv.com, créez une application de type <b>OAuth</b>.<br>2) Ajoutez comme URL de redirection exactement : <b id="ruri" style="word-break:break-all"></b> (HTTPS obligatoire, ou http://localhost).<br>3) Collez ici le Client ID, puis cliquez sur « Connexion Deriv » : la page d'autorisation de Deriv s'ouvre, puis vous revenez ici connecté. Les anciens App ID ne fonctionnent plus.</div>
@@ -81,7 +88,7 @@ table{width:100%;border-collapse:collapse;font-size:12px}td,th{padding:5px 4px;b
 <button class="pri" id="cOpen" style="width:100%;margin-top:12px">Déposer / Retirer sur Deriv ↗</button><div class="hint">Dépôts et retraits se font sur la caisse sécurisée de Deriv (le bot n'a pas accès à votre argent). Vos mouvements apparaissent ci-dessous après connexion.</div></div>
 <div class="card"><h3>Dépôts et retraits</h3><div class="logw"><table><thead><tr><th>Date</th><th>Type</th><th>Détail</th><th>Montant</th><th>Solde</th></tr></thead><tbody id="cTx"></tbody></table></div></div></div>
 <div id="vH" class="pg" style="display:none"><div class="card"><h3>Toutes les transactions du compte</h3><div class="logw" style="max-height:420px"><table><thead><tr><th>Date</th><th>Type</th><th>Détail</th><th>Montant</th><th>Solde</th></tr></thead><tbody id="hAll"></tbody></table></div><button id="hcsv" style="margin-top:8px">Export CSV</button></div>
-<div class="card"><h3>Trades de cette session</h3><div class="logw"><table><thead><tr><th>Heure</th><th>Contrat</th><th>Mise</th><th>Résultat</th></tr></thead><tbody id="hSes"></tbody></table></div></div></div>
+<div class="card"><h3>Trades de cette session</h3><div class="logw"><table><thead><tr><th>Heure</th><th>Contrat</th><th>Choisi</th><th>Ticks</th><th>Sorti</th><th>Mise</th><th>Résultat</th></tr></thead><tbody id="hSes"></tbody></table></div></div></div>
 <div id="toast"></div>
 <script>
 const $=s=>document.querySelector(s),L=localStorage;
@@ -133,14 +140,15 @@ function subTicks(){send({forget_all:'ticks'});send({ticks_history:S.sym,end:'la
 $('#sym').onchange=e=>{S.sym=e.target.value;L.dbp_sym=S.sym;S.D=[];S.P=[];subTicks()};
 function pushTick(q,pip){S.pip=pip;S.P.push(q);S.D.push(+q.toFixed(pip).slice(-1));if(S.P.length>100){S.P.shift();S.D.shift()}}
 function onMsg(m){
+ if(m.req_id===777&&m.msg_type==='history'){onPrecHist(m);return}
  if(m.error){toast(m.error.message||'Erreur API');if(m.msg_type==='buy'||m.msg_type==='proposal'){S.busy=false;if(S.auto)stopBot();drawMan()}return}
  switch(m.msg_type){
  case'balance':S.bal=m.balance.balance;S.cur=m.balance.currency;drawBal();break;
  case'history':S.P=m.history.prices.map(Number);S.pip=m.pip_size||S.pip;S.D=S.P.map(p=>+p.toFixed(S.pip).slice(-1));render();break;
- case'tick':if(m.tick.symbol===S.sym){pushTick(m.tick.quote,m.tick.pip_size);render();if(S.auto&&!S.busy)runStrat()}break;
+ case'tick':if(m.tick.symbol===S.sym){pushTick(m.tick.quote,m.tick.pip_size);render();if(S.auto&&!S.busy)runStrat();if(S.arm)armTick()}break;
  case'statement':S.stm=(m.statement&&m.statement.transactions)||[];drawStm();break;
  case'proposal':send({buy:m.proposal.id,price:m.proposal.ask_price});break;
- case'buy':S.open={id:m.buy.contract_id,stake:m.buy.buy_price,label:S.lastLabel};send({proposal_open_contract:1,contract_id:m.buy.contract_id,subscribe:1});S.busy=true;drawMan();break;
+ case'buy':S.open={id:m.buy.contract_id,stake:m.buy.buy_price,label:S.lastLabel,t:S.lastT};send({proposal_open_contract:1,contract_id:m.buy.contract_id,subscribe:1});S.busy=true;drawMan();break;
  case'proposal_open_contract':{const c=m.proposal_open_contract;if(S.open&&c.contract_id===S.open.id&&c.is_sold){if(m.subscription)send({forget:m.subscription.id});done(c)}break}}}
 function drawBal(){$('#bal').textContent=S.bal.toFixed(2)+' '+S.cur}
 // ---------- Rendu ----------
@@ -153,14 +161,14 @@ function buy(t){if(!S.auth){toast('Connectez-vous d\'abord');return false}if(S.b
  const stake=+(+$('#stake').value*(S.auto?Math.pow(+$('#mg').value||1,S.step):1)).toFixed(2);
  const p={proposal:1,amount:stake,basis:'stake',contract_type:t.type,currency:S.cur,underlying_symbol:S.sym};
  if(t.type==='ACCU'){p.growth_rate=+$('#gr').value;p.limit_order={take_profit:+$('#tp').value}}else{p.duration=Math.min(10,Math.max(1,+$('#tk').value||1));p.duration_unit='t';if(t.b!=null)p.barrier=String(t.b)}
- S.lastLabel=t.type.replace('DIGIT','')+(t.b!=null?' '+t.b:'');S.busy=true;send(p);return true}
+ S.lastT={...t,n:p.duration};S.lastLabel=t.type.replace('DIGIT','')+(t.b!=null?' '+t.b:'');S.busy=true;send(p);return true}
 function done(c){const pr=+c.profit,win=pr>0;S.pnl+=pr;S.n++;win?(S.w++,S.ls=0,S.step=0):(S.ls++,S.step=Math.min(S.step+1,+$('#mgm').value));
- S.rows.unshift({t:new Date().toLocaleTimeString(),c:S.open.label,s:S.open.stake,r:pr});if(S.rows.length>200)S.rows.pop();S.open=null;S.busy=false;beep(win);drawStats();drawMan();getStm();
+ {const o=S.open.t||{},ac=o.type==='ACCU',ed=String(c.exit_tick_display_value||c.exit_tick||'');S.rows.unshift({t:new Date().toLocaleTimeString(),c:(o.type||'').replace('DIGIT',''),b:o.b!=null?o.b:'—',n:ac?(c.tick_count||'—'):(o.n||1),o:ac?'—':(ed?ed.slice(-1):'?'),s:S.open.stake,r:pr})}if(S.rows.length>200)S.rows.pop();S.open=null;S.busy=false;beep(win);drawStats();drawMan();getStm();precRepeat();
  if(S.auto){if(S.pnl<=-Math.abs(+$('#sl').value)){stopBot();toast('Stop loss atteint')}else if(S.pnl>=+$('#tpS').value){stopBot();toast('Objectif atteint 🎯')}else if(S.n>=+$('#mx').value){stopBot();toast('Nombre max de trades atteint')}}}
 function drawStats(){const e=$('#spnl');e.textContent=S.pnl.toFixed(2);e.className=S.pnl>=0?'pos':'neg';$('#strd').textContent=S.n;$('#swr').textContent=(S.n?Math.round(S.w/S.n*100):0)+'%';$('#sstk').textContent=S.ls;
- $('#log').innerHTML=S.rows.map(r=>`<tr><td>${r.t}</td><td>${r.c}</td><td>${r.s}</td><td class="${r.r>0?'pos':'neg'}">${r.r>0?'+':''}${r.r.toFixed(2)}</td></tr>`).join('')}
+ $('#log').innerHTML=S.rows.map(rowTr).join('')}
 $('#rst').onclick=()=>{S.pnl=S.n=S.w=S.ls=S.step=0;S.rows=[];drawStats()};
-$('#csv').onclick=()=>{const t='heure,contrat,mise,resultat\n'+S.rows.map(r=>[r.t,r.c,r.s,r.r].join(',')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t]));a.download='trades.csv';a.click()};
+$('#csv').onclick=()=>{const t='heure,contrat,chiffre_choisi,ticks,chiffre_sorti,mise,resultat\n'+S.rows.map(r=>[r.t,r.c,r.b,r.n,r.o,r.s,r.r].join(',')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t]));a.download='trades.csv';a.click()};
 // ---------- Manuel ----------
 function drawMan(){const f=$('#fam').value,b=$('#bar').value,d=S.busy;let h='';
  if(f==='ou')h=`<button class="g" ${d?'disabled':''} data-t="DIGITOVER">Over ${b}</button><button class="r" ${d?'disabled':''} data-t="DIGITUNDER">Under ${b}</button>`;
@@ -197,20 +205,44 @@ const STR={
 function fillStrat(){const f=$('#fam').value;$('#strat').innerHTML=Object.entries(STR[f]).map(([k,v])=>`<option value="${k}">${v.n}</option>`).join('');sd()}
 const sd=()=>{const s=STR[$('#fam').value][$('#strat').value];$('#sdesc').textContent=s?s.d:''};$('#strat').onchange=sd;$('#fam').addEventListener('input',fillStrat);fillStrat();
 function runStrat(){const t=STR[$('#fam').value][$('#strat').value].f();if(t)buy(t)}
-function startBot(){if(!S.auth){toast('Connectez-vous d\'abord');return}if(!S.virt&&!confirm('Compte RÉEL : le bot va trader avec de l\'argent réel. Continuer ?'))return;S.auto=true;$('#go').textContent='■ Arrêter le bot';$('#go').className='r'}
+function startBot(){if(!S.auth){toast('Connectez-vous d\'abord');return}if(!S.virt&&!confirm('Compte RÉEL : le bot va trader avec de l\'argent réel. Continuer ?'))return;armOff();S.auto=true;$('#go').textContent='■ Arrêter le bot';$('#go').className='r'}
 function stopBot(){S.auto=false;$('#go').textContent='▶ Démarrer le bot';$('#go').className='g'}
 $('#go').onclick=()=>S.auto?stopBot():startBot();
 function mode(a){$('#manual').style.display=a?'none':'';$('#auto').style.display=a?'':'none';$('#tM').className=a?'':'on';$('#tA').className=a?'on':'';if(!a)stopBot()}
 $('#tM').onclick=()=>mode(0);$('#tA').onclick=()=>mode(1);
 $('#appid').onchange=()=>{L.dbp_app=$('#appid').value.trim()};
 (async()=>{await callback();if(await loadAccounts())drawAcc();drawMan();drawStats();connect()})();
+// ---------- Précision ----------
+const TS=()=>/^1HZ/.test(S.sym)?1:2;
+const AVG=(P,i)=>{let s=0,c=0;for(let k=Math.max(1,i-60);k<=i;k++){s+=Math.abs(P[k]-P[k-1]);c++}return s/(c||1)};
+const PSIG={over:(D,i,d)=>D[i]<=d&&D[i-1]<=d,under:(D,i,d)=>D[i]>=d&&D[i-1]>=d,match:(D,i,d)=>!D.slice(i-14,i+1).includes(d),differ:(D,i,d)=>D[i]===d,
+ accu:(D,i,d,P)=>{let m=0;for(let k=i-5;k<=i;k++)m=Math.max(m,Math.abs(P[k]-P[k-1]));return m<AVG(P,i)*.9}};
+function pwin(c,D,P,i,n,d){const x=D[i+n];if(c==='over')return x>d;if(c==='under')return x<d;if(c==='match')return x===d;if(c==='differ')return x!==d;let m=0;for(let k=i+1;k<=i+10;k++)m=Math.max(m,Math.abs(P[k]-P[k-1]));return m<2*AVG(P,i)}
+const ptrade=(c,d)=>c==='accu'?{type:'ACCU'}:{type:{over:'DIGITOVER',under:'DIGITUNDER',match:'DIGITMATCH',differ:'DIGITDIFF'}[c],b:d};
+function precStart(auto){if(!S.ws||S.ws.readyState!==1){toast('Pas de connexion');return}S.autoArm=!!auto;$('#pres').textContent='Calcul en cours…';send({ticks_history:S.sym,end:'latest',count:1000,style:'ticks',req_id:777})}
+function onPrecHist(m){const P=m.history.prices.map(Number),pip=m.pip_size||S.pip,D=P.map(p=>+p.toFixed(pip).slice(-1));
+ const c=$('#pc').value,d=+$('#pd').value,n=Math.max(1,Math.min(10,+$('#tk').value||1)),f=PSIG[c],on=[];let prev=false,w=0,t=0,aw=0,al=0;
+ for(let i=16;i<D.length-12;i++){const s=f(D,i,d,P),win=pwin(c,D,P,i,n,d);al++;if(win)aw++;if(s){t++;if(win)w++;if(!prev)on.push(i)}prev=s}
+ if(on.length<3){$('#pres').textContent='Signal trop rare sur cet échantillon : choisissez un autre chiffre.';return}
+ const g=on.slice(1).map((x,k)=>x-on[k]).sort((a,b)=>a-b),N=Math.max(1,g[Math.floor(g.length/2)]);
+ S.pr={c,d,n,N};$('#parm').disabled=false;
+ $('#pres').innerHTML=`Signal observé environ tous les <b>${N} ticks (≈ ${N*TS()} s)</b>. Sur ${al} ticks analysés : réussite après signal <b>${(w/t*100).toFixed(1)}%</b> (${w}/${t}) contre <b>${(aw/al*100).toFixed(1)}%</b> sans signal.<br><i>Sur les indices synthétiques, l'écart est dû au hasard : ce n'est pas une garantie.</i>`;
+ if(S.autoArm)armOn()}
+function armOn(){if(!S.pr)return;if(S.auto)stopBot();S.arm={...S.pr,left:S.pr.N};S.prepOn=$('#prep').checked;$('#pstop').disabled=false;armTxt()}
+function armOff(){S.arm=null;S.prepOn=false;S.autoArm=false;$('#pstop').disabled=true;$('#pst').textContent=''}
+function armTxt(){const a=S.arm;if(a)$('#pst').textContent=a.left>0?`Trade dans ${a.left} ticks (≈ ${a.left*TS()} s)`:'Compte à rebours terminé : attente du signal…'}
+function armTick(){const a=S.arm;if(a.left>0)a.left--;armTxt();if(a.left>0||S.busy||!S.auth)return;
+ if(PSIG[a.c](S.D,S.D.length-1,a.d,S.P)){$('#pst').textContent='Signal atteint : trade lancé';const t=ptrade(a.c,a.d);S.arm=null;$('#pstop').disabled=true;buy(t)}}
+function precRepeat(){if(!S.prepOn||S.arm)return;if(S.pnl<=-Math.abs(+$('#sl').value)||S.pnl>=+$('#tpS').value){armOff();toast('Limite de session atteinte : répétition arrêtée');return}precStart(true)}
+$('#pcalc').onclick=()=>precStart(false);$('#parm').onclick=armOn;$('#pstop').onclick=armOff;
+function rowTr(r){const k=r.r>0?'pos':'neg';return `<tr><td>${r.t}</td><td>${r.c}</td><td>${r.b}</td><td>${r.n}</td><td class="${k}"><b>${r.o}</b></td><td>${r.s}</td><td class="${k}">${r.r>0?'Gagné +':'Perdu '}${r.r.toFixed(2)}</td></tr>`}
 // ---------- Vues, caisse, historique ----------
 const CASHIER='https://home.deriv.com/dashboard';
 const ty=a=>({buy:'Achat',sell:'Vente',deposit:'Dépôt',withdrawal:'Retrait',transfer:'Transfert'}[a]||a||'—');
 function getStm(){if(S.auth)send({statement:1,limit:100,description:1})}
 function rowsOf(list){return list.map(t=>{const a=+t.amount;return `<tr><td>${t.transaction_time?new Date(t.transaction_time*1000).toLocaleString():''}</td><td>${ty(t.action_type)}</td><td style="max-width:240px">${(t.longcode||t.description||'').slice(0,90)}</td><td class="${a>=0?'pos':'neg'}">${a>0?'+':''}${a.toFixed(2)}</td><td>${(+t.balance_after||0).toFixed(2)}</td></tr>`}).join('')||'<tr><td colspan="5">Aucune transaction (connectez-vous)</td></tr>'}
 function drawStm(){const l=S.stm||[];$('#hAll').innerHTML=rowsOf(l);$('#cTx').innerHTML=rowsOf(l.filter(t=>/deposit|withdraw|transfer/.test(t.action_type||'')));
- $('#hSes').innerHTML=S.rows.map(r=>`<tr><td>${r.t}</td><td>${r.c}</td><td>${r.s}</td><td class="${r.r>0?'pos':'neg'}">${r.r>0?'+':''}${r.r.toFixed(2)}</td></tr>`).join('');$('#cBal').textContent=$('#bal').textContent}
+ $('#hSes').innerHTML=S.rows.map(rowTr).join('');$('#cBal').textContent=$('#bal').textContent}
 function view(v){['T','C','H'].forEach(k=>{$('#v'+k).style.display=k===v?'':'none';$('#n'+k).className=k===v?'on':''});if(v!=='T'){getStm();drawStm()}}
 ['T','C','H'].forEach(k=>$('#n'+k).onclick=()=>view(k));$('#cOpen').onclick=()=>window.open(CASHIER,'_blank');
 $('#hcsv').onclick=()=>{const t='date,type,description,montant,solde\n'+(S.stm||[]).map(x=>[x.transaction_time?new Date(x.transaction_time*1000).toISOString():'',ty(x.action_type),'"'+(x.longcode||'').replace(/"/g,"'")+'"',x.amount,x.balance_after].join(',')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t]));a.download='historique.csv';a.click()};
