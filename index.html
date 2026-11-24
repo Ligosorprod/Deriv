@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DerivBot Pro</title>
+<style>
+:root{--bg:#050806;--card:#0c120e;--card2:#131c16;--line:#1f3326;--tx:#e6f5ea;--mut:#7fa08a;--ac:#18d460;--ok:#22c55e;--ko:#ef4444;--bl:#10b981}
+*{box-sizing:border-box;margin:0}body{background:var(--bg);color:var(--tx);font:14px system-ui,Segoe UI,Roboto,sans-serif;padding-bottom:40px}
+header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.logo{font-weight:800;font-size:18px}.logo b{color:var(--ac)}
+.hr{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.bal{background:var(--card2);padding:7px 12px;border-radius:8px;font-weight:700}
+.badge{font-size:11px;padding:2px 7px;border-radius:99px;font-weight:700}.demo{background:#0f766e}.reel{background:#b91c1c}
+button,select,input{font:inherit;color:var(--tx);background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+button{cursor:pointer;font-weight:700;transition:.15s}button:hover{filter:brightness(1.2)}button:disabled{opacity:.4;cursor:not-allowed}
+.pri{background:var(--ac);border-color:var(--ac)}.g{background:var(--ok);border-color:var(--ok)}.r{background:var(--ko);border-color:var(--ko)}
+main{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;padding:14px;max-width:1200px;margin:auto}
+@media(max-width:850px){main{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px}
+h3{font-size:13px;color:var(--mut);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+.price{font-size:30px;font-weight:800}canvas{width:100%;height:150px;display:block}
+.digits{display:grid;grid-template-columns:repeat(10,1fr);gap:6px;margin-top:10px}
+.dg{text-align:center;font-size:12px}.bar{height:70px;background:var(--card2);border-radius:6px;position:relative;overflow:hidden;border:2px solid transparent}
+.bar i{position:absolute;bottom:0;left:0;right:0;background:var(--bl);transition:.2s}.dg.max .bar i{background:var(--ok)}.dg.min .bar i{background:var(--ko)}.dg.last .bar{border-color:#fff}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}label{display:block;font-size:11px;color:var(--mut);margin-bottom:3px}
+.row>div>*{width:100%}.tabs{display:flex;gap:6px;margin-bottom:10px}.tabs button{flex:1}.tabs .on{background:var(--ac);border-color:var(--ac)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center}.stats b{display:block;font-size:18px}.stats span{font-size:11px;color:var(--mut)}
+.pos{color:var(--ok)}.neg{color:var(--ko)}
+table{width:100%;border-collapse:collapse;font-size:12px}td,th{padding:5px 4px;border-bottom:1px solid var(--line);text-align:left}.logw{max-height:260px;overflow:auto}
+.warn{background:#3b2a0a;border:1px solid #92610f;color:#fcd34d;padding:10px;border-radius:8px;font-size:12px;margin-bottom:14px}
+.hint{font-size:11px;color:var(--mut);margin-top:6px}
+.nav{display:flex;gap:6px;padding:10px 14px 0;max-width:1200px;margin:auto}.nav button{flex:1}.nav .on{background:var(--ac);border-color:var(--ac)}.chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}.chip{width:34px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;background:#0f5132}.chip.od{background:#2b3a31}.chip.ln{outline:3px solid #fff}.pg{max-width:1200px;margin:14px auto;padding:0 14px}
+#toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--card2);border:1px solid var(--line);padding:10px 16px;border-radius:10px;display:none;z-index:9}
+:root{--r:20px}
+body{background:radial-gradient(1100px 600px at 8% -10%,#0b3a21 0,transparent 60%),radial-gradient(900px 500px at 100% 0,#082b19 0,transparent 55%),var(--bg);background-attachment:fixed}
+header{border-radius:0 0 24px 24px;background:rgba(12,18,14,.85);backdrop-filter:blur(12px);box-shadow:0 6px 24px rgba(0,0,0,.4)}
+.card{border-radius:var(--r);background:linear-gradient(160deg,var(--card),#070b08);box-shadow:0 8px 28px rgba(0,0,0,.35);transition:transform .25s,border-color .25s;animation:rise .45s both}
+.card:hover{transform:translateY(-2px);border-color:#3b4d72}
+.card h3{cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;font-size:14px;color:#c4cde0}
+.card h3::after{content:'▾';transition:transform .2s;color:var(--mut)}.card.fold h3::after{transform:rotate(-90deg)}
+.card.fold>*:not(h3){display:none}.card.fold h3{margin-bottom:0}
+button,select,input{border-radius:12px;transition:transform .12s,filter .15s,box-shadow .2s}
+input:focus,select:focus{outline:none;border-color:var(--ac);box-shadow:0 0 0 3px rgba(24,212,96,.25)}
+button:active:not(:disabled){transform:scale(.95)}
+.pri{background:linear-gradient(135deg,#18d460,#0e9f4f);border:0;box-shadow:0 4px 16px rgba(24,212,96,.35)}
+.g{background:linear-gradient(135deg,#15803d,#22c55e);border:0;box-shadow:0 4px 14px rgba(34,197,94,.25)}
+.r{background:linear-gradient(135deg,#b91c1c,#ef4444);border:0;box-shadow:0 4px 14px rgba(239,68,68,.25)}
+.nav{gap:6px;margin-top:12px}.nav button,.tabs button{border-radius:99px;padding:10px}.nav .on,.tabs .on{background:linear-gradient(135deg,#18d460,#0e9f4f);border:0;box-shadow:0 4px 14px rgba(24,212,96,.35)}
+.bal{border-radius:99px;background:linear-gradient(135deg,#0f1a13,#16271c);border:1px solid var(--line)}
+.badge{border-radius:99px}
+#st{display:inline-flex;align-items:center;gap:5px;padding:3px 9px}#st::before{content:'';width:7px;height:7px;border-radius:50%;background:#fff;animation:pl 1.4s infinite}
+.chip{border-radius:12px;box-shadow:0 3px 10px rgba(0,0,0,.35)}.chip.ln{animation:pop .3s both}
+.bar{border-radius:10px}.bar i{border-radius:6px}
+.warn{border-radius:16px}.logw{border-radius:14px;background:rgba(255,255,255,.02)}tbody tr{transition:background .15s}tbody tr:hover{background:rgba(255,255,255,.05)}
+.stats>div{background:rgba(255,255,255,.03);border-radius:14px;padding:10px 4px}
+#toast{border-radius:99px;animation:rise .3s both}
+.fw{animation:fw .9s}.fl{animation:fl .9s}
+@keyframes rise{from{opacity:0;transform:translateY(12px)}}
+@keyframes pop{from{transform:scale(.3);opacity:0}}
+@keyframes pl{50%{opacity:.25;transform:scale(.7)}}
+@keyframes fw{0%{box-shadow:0 0 0 0 rgba(34,197,94,.8)}100%{box-shadow:0 0 0 22px transparent}}
+@keyframes fl{0%{box-shadow:0 0 0 0 rgba(239,68,68,.8)}100%{box-shadow:0 0 0 22px transparent}}
+@media(max-width:850px){body{padding-bottom:84px}.nav{position:fixed;bottom:10px;left:10px;right:10px;margin:0;z-index:8;padding:6px;max-width:none;background:rgba(12,18,14,.92);backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:99px;box-shadow:0 8px 30px rgba(0,0,0,.5)}}
+.pri,.nav .on,.tabs .on{color:#03140a}.logo b{text-shadow:0 0 14px rgba(24,212,96,.6)}.mpre{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}.mpre button{font-size:12px;padding:6px 10px;border-radius:99px}
+</style></head><body>
+<header>
+ <div class="logo">Deriv<b>Bot</b> Pro <span id="st" class="badge" style="background:#444">hors ligne</span></div>
+ <div class="hr">
+  <select id="acc" style="display:none"></select><span id="typ"></span><div class="bal" id="bal">— </div>
+  <button class="pri" id="login">Connexion Deriv</button><button id="logout" style="display:none">Déconnexion</button>
+ </div>
+</header>
+<div class="nav"><button id="nT" class="on">Trading</button><button id="nM">Montante</button><button id="nC">Caisse</button><button id="nH">Historique</button></div>
+<main id="vT">
+<div>
+ <div class="warn">⚠️ Le trading de contrats dérivés comporte un risque élevé de perte totale. Aucune stratégie ne garantit un gain. Testez toujours en <b>compte démo</b> d'abord.</div>
+ <div class="card">
+  <div class="row"><div><label>Marché</label><select id="sym"></select></div><div style="text-align:right"><label>Dernier prix</label><div class="price" id="px">—</div></div></div>
+  <label>20 derniers chiffres (vert : pair · gris : impair · contour : le plus récent)</label><div class="chips" id="chips"></div>
+  <div class="digits" id="dgs"></div><div class="hint">Fréquence des derniers chiffres (100 ticks) — vert : max · rouge : min · contour blanc : dernier chiffre</div>
+ </div>
+ <div class="card"><h3>📈 Statistiques de session</h3>
+  <div class="stats"><div><b id="spnl">0.00</b><span>Profit/Perte</span></div><div><b id="strd">0</b><span>Trades</span></div><div><b id="swr">0%</b><span>Réussite</span></div><div><b id="sstk">0</b><span>Série pertes</span></div></div>
+  <div style="margin-top:10px;display:flex;gap:8px"><button id="csv">Export CSV</button><button id="rst">Réinitialiser</button><label style="margin:8px 0 0 auto"><input type="checkbox" id="snd" checked style="width:auto"> Sons</label></div>
+ </div>
+ <div class="card"><h3>📒 Journal</h3><div class="logw"><table><thead><tr><th>Heure</th><th>Contrat</th><th>Choisi</th><th>Ticks</th><th>Sorti</th><th>Mise</th><th>Résultat</th></tr></thead><tbody id="log"></tbody></table></div></div>
+</div>
+<div>
+ <div class="card">
+  <div class="tabs"><button id="tM" class="on">Manuel</button><button id="tA">Auto</button></div>
+  <div class="row"><div><label>Mise</label><input id="stake" type="number" min="0.35" step="0.01" value="1"></div>
+  <div><label>Famille de contrat</label><select id="fam"><option value="ou">Over / Under</option><option value="md">Match / Differ</option><option value="acc">Accumulator</option><option value="cb">Crash / Boom (Rise-Fall)</option></select></div></div>
+  <div class="row" id="bRow"><div><label>Chiffre (barrière)</label><input id="bar" type="number" min="0" max="9" value="3"></div><div><label>Ticks par trade (1-10)</label><input id="tk" type="number" min="1" max="10" value="1"></div></div>
+  <div class="row" id="aRow" style="display:none"><div><label>Croissance</label><select id="gr"><option>0.01</option><option>0.02</option><option selected>0.03</option><option>0.04</option><option>0.05</option></select></div><div><label>Take profit (0 = aucun)</label><input id="tp" type="number" step="0.1" value="1"></div></div>
+  <div class="row" id="atRow" style="display:none"><div><label>Nombre de ticks (0 = sans limite)</label><input id="at" type="number" min="0" max="60" value="0"></div><div class="hint" style="align-self:end">Vente automatique après ce nombre de ticks. Le take profit devient facultatif (mettez 0).</div></div>
+  <div id="manual"><div class="row" id="mBtns"></div></div>
+  <div id="auto" style="display:none">
+   <div class="row"><div style="grid-column:1/3"><label>Stratégie</label><select id="strat"></select></div></div>
+   <div class="hint" id="sdesc" style="margin:-4px 0 8px"></div>
+   <div class="row"><div><label>Stop loss session</label><input id="sl" type="number" value="10"></div><div><label>Objectif de gain</label><input id="tpS" type="number" value="10"></div></div>
+   <div class="row"><div><label>Martingale ×</label><input id="mg" type="number" step="0.1" min="1" value="1"></div><div><label>Pas max martingale</label><input id="mgm" type="number" min="1" value="3"></div></div>
+   <div class="row"><div><label>Nb max trades</label><input id="mx" type="number" value="50"></div><div><label>Stop après X pertes d'affilée</label><input id="ml" type="number" min="1" value="3"></div></div>
+   <button class="g" id="go" style="width:100%">▶ Démarrer le bot</button>
+   <div class="hint">Martingale à 1 = désactivée. La martingale augmente fortement le risque.</div>
+  </div>
+ </div>
+ <div class="card"><h3>🎯 Précision</h3>
+  <div class="row"><div><label>Contrat</label><select id="pc"><option value="over">Over</option><option value="under">Under</option><option value="match">Match</option><option value="differ">Differ</option><option value="accu">Accumulator</option></select></div><div id="pdW"><label>Chiffre</label><input id="pd" type="number" min="0" max="9" value="3"></div><div id="pgW" style="display:none"><label>Croissance (%)</label><select id="pg"><option value="0.01">1 %</option><option value="0.02">2 %</option><option value="0.03" selected>3 %</option><option value="0.04">4 %</option><option value="0.05">5 %</option></select></div></div>
+  <div style="display:flex;gap:8px;margin-bottom:8px"><button id="pO3" style="flex:1">Over 3</button><button id="pU7" style="flex:1">Under 7</button><button id="pDF" style="flex:1">Differ ≈90 %</button></div>
+  <button class="pri" id="pcalc" style="width:100%">Calculer</button><div id="pres" class="hint" style="font-size:13px;color:var(--tx);margin:8px 0"></div>
+  <div style="display:flex;gap:8px"><button class="g" id="parm" disabled style="flex:1">▶ Lancer au tick calculé</button><button id="pstop" disabled>Annuler</button></div>
+  <label style="margin-top:8px"><input type="checkbox" id="prep" style="width:auto"> Répéter automatiquement</label><div id="pst" style="font-weight:700;margin-top:6px"></div>
+  <div class="hint">Utilise la mise et les ticks par trade du panneau ci-dessus. Lancer la précision arrête le bot auto (et inversement).</div>
+ </div>
+ <div class="card"><h3>🔐 Connexion</h3>
+  <label>Client ID (app OAuth créée sur developers.deriv.com)</label><input id="appid" style="width:100%" placeholder="ex. app12345">
+  <div class="hint">1) Sur developers.deriv.com, créez une application de type <b>OAuth</b>.<br>2) Ajoutez comme URL de redirection exactement : <b id="ruri" style="word-break:break-all"></b> (HTTPS obligatoire, ou http://localhost).<br>3) Collez ici le Client ID, puis cliquez sur « Connexion Deriv » : la page d'autorisation de Deriv s'ouvre, puis vous revenez ici connecté. Les anciens App ID ne fonctionnent plus.</div>
+  <label style="margin-top:10px">Alternative : token PAT (app de type PAT)</label>
+  <div style="display:flex;gap:6px"><input id="tok" type="password" style="flex:1"><button id="tokb">OK</button></div>
+ </div>
+</div>
+</main><div id="vC" class="pg" style="display:none"><div class="card"><h3>💰 Caisse</h3><div class="stats" style="grid-template-columns:1fr"><div><b id="cBal">—</b><span>Solde du compte actif</span></div></div>
+<button class="pri" id="cOpen" style="width:100%;margin-top:12px">Déposer / Retirer sur Deriv ↗</button>
+<button class="g" id="cTop" style="width:100%;margin-top:8px">Recharger le compte démo</button><div class="hint">Recharge démo : c'est Deriv qui fixe le montant (le solde est remis à 10 000 USD), on ne peut pas choisir un autre montant. Il n'y a pas de retrait sur un compte démo.</div><div class="hint">Dépôts et retraits se font sur la caisse sécurisée de Deriv (le bot n'a pas accès à votre argent). Vos mouvements apparaissent ci-dessous après connexion.</div></div>
+<div class="card"><h3>💸 Dépôts et retraits</h3><div class="logw"><table><thead><tr><th>Date</th><th>Type</th><th>Détail</th><th>Montant</th><th>Solde</th></tr></thead><tbody id="cTx"></tbody></table></div></div></div>
+<div id="vH" class="pg" style="display:none"><div class="card"><h3>🧾 Toutes les transactions du compte</h3><div class="logw" style="max-height:420px"><table><thead><tr><th>Date</th><th>Type</th><th>Détail</th><th>Montant</th><th>Solde</th></tr></thead><tbody id="hAll"></tbody></table></div><button id="hcsv" style="margin-top:8px">Export CSV</button></div>
+<div class="card"><h3>📋 Trades de cette session</h3><div class="logw"><table><thead><tr><th>Heure</th><th>Contrat</th><th>Choisi</th><th>Ticks</th><th>Sorti</th><th>Mise</th><th>Résultat</th></tr></thead><tbody id="hSes"></tbody></table></div></div></div>
+<div id="vM" class="pg" style="display:none"><div class="card"><h3>🪜 Montante</h3>
+<div class="hint" style="margin:0 0 8px">Chaque gain est réinvesti : mise 5 → gain de 1 → prochaine mise 6. Après une perte, retour à la mise de départ.</div>
+<div class="row"><div><label>Mode</label><select id="mmode"><option value="auto">Auto (le logiciel choisit)</option><option value="manuel">Manuel (je choisis)</option></select></div><div><label>Attente max avant trade (s)</label><input id="mwt" type="number" min="10" max="90" value="90"></div></div>
+<div class="mpre" id="mpre"><button data-c="over" data-d="2">Over 2 · 70 %</button><button data-c="over" data-d="1">Over 1 · 80 %</button><button data-c="under" data-d="7">Under 7 · 70 %</button><button data-c="under" data-d="8">Under 8 · 80 %</button><button data-c="differ" data-d="5">Differ · 90 %</button></div>
+<div class="row"><div><label>Contrat</label><select id="mc"><option value="over">Over</option><option value="under">Under</option><option value="differ">Differ</option><option value="match">Match</option></select></div><div><label>Chiffre</label><input id="md" type="number" min="0" max="9" value="2"></div></div>
+<div class="row"><div><label>Mise de départ</label><input id="mb" type="number" min="0.35" step="0.01" value="5"></div><div><label>Paliers max (gains d'affilée)</label><input id="mm" type="number" min="1" value="5"></div></div>
+<div class="row"><div><label>Winrate récent minimum (%)</label><input id="mw" type="number" min="50" max="100" value="70"></div><div><label>Ticks par trade</label><input id="mn" type="number" min="1" max="10" value="1"></div></div>
+<div class="row"><div><label>Stop loss session</label><input id="msl" type="number" value="10"></div><div></div></div>
+<div id="mtP" style="margin:6px 0"></div>
+<button class="g" id="mgo" style="width:100%">▶ Lancer la montante</button>
+<div id="mtL" class="hint" style="font-size:13px;color:var(--tx);margin-top:10px"></div>
+<div class="hint">Analyse : le bot n'entre que si, sur les 30 derniers ticks, le contrat choisi aurait gagné au moins le pourcentage demandé. Seuls les contrats à plus de 70 % de probabilité sont acceptés (Match, à 10 %, est refusé). En mode auto, si aucun signal n'apparaît, le logiciel lance quand même le meilleur trade au bout de l'attente maximale (90 s).</div>
+</div>
+<div class="card"><h3>📜 Historique de la montante</h3><div class="logw"><table><thead><tr><th>Heure</th><th>Contrat</th><th>Choisi</th><th>Sorti</th><th>Mise</th><th>Palier</th><th>Résultat</th></tr></thead><tbody id="mHist"></tbody></table></div><div class="hint">⏱ = trade lancé à la fin de l'attente maximale.</div></div></div>
+<div id="toast"></div>
+<script>
+const $=s=>document.querySelector(s),L=localStorage;
+const SYMS={R_10:'Volatility 10',R_25:'Volatility 25',R_50:'Volatility 50',R_75:'Volatility 75',R_100:'Volatility 100','1HZ10V':'Vol 10 (1s)','1HZ25V':'Vol 25 (1s)','1HZ50V':'Vol 50 (1s)','1HZ75V':'Vol 75 (1s)','1HZ100V':'Vol 100 (1s)',BOOM300N:'Boom 300',BOOM500:'Boom 500',BOOM1000:'Boom 1000',CRASH300N:'Crash 300',CRASH500:'Crash 500',CRASH1000:'Crash 1000'};
+const S={ws:null,sym:L.dbp_sym||'R_100',D:[],P:[],pip:2,cur:'USD',bal:0,auth:false,auto:false,busy:false,open:null,pnl:0,n:0,w:0,ls:0,step:0,rows:[]};
+$('#sym').innerHTML=Object.entries(SYMS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');$('#sym').value=S.sym;
+$('#appid').value=L.dbp_app||'';
+function toast(t){const e=$('#toast');e.textContent=t;e.style.display='block';clearTimeout(e.t);e.t=setTimeout(()=>e.style.display='none',3500)}
+function beep(ok){if(!$('#snd').checked)return;try{const a=new AudioContext(),o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.frequency.value=ok?880:220;g.gain.value=.08;o.start();o.stop(a.currentTime+.18)}catch(e){}}
+// ---------- Auth (OAuth2 + PKCE, nouvelle API Deriv) ----------
+const API='https://api.derivws.com',WSP='wss://api.derivws.com/trading/v1/options/ws/public';
+const REDIR=()=>location.origin+location.pathname;
+$('#ruri').textContent=location.origin+location.pathname;
+const b64=a=>btoa(String.fromCharCode(...new Uint8Array(a))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+async function login(){const cid=$('#appid').value.trim();if(!cid){toast('Entrez d\'abord votre Client ID (carte Connexion)');return}L.dbp_app=cid;
+ const v=b64(crypto.getRandomValues(new Uint8Array(32))),ch=b64(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(v))),st=crypto.randomUUID();
+ sessionStorage.dbp_v=v;sessionStorage.dbp_st=st;const u=new URL('https://auth.deriv.com/oauth2/auth');
+ Object.entries({response_type:'code',client_id:cid,redirect_uri:REDIR(),scope:'trade',state:st,code_challenge:ch,code_challenge_method:'S256'}).forEach(([k,x])=>u.searchParams.set(k,x));location.href=u.toString()}
+async function callback(){const q=new URLSearchParams(location.search),code=q.get('code');if(!code)return;history.replaceState({},'',location.pathname);
+ if(q.get('state')!==sessionStorage.dbp_st){toast('État OAuth invalide');return}
+ try{const r=await fetch('https://auth.deriv.com/oauth2/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({grant_type:'authorization_code',client_id:L.dbp_app,code,redirect_uri:REDIR(),code_verifier:sessionStorage.dbp_v})});
+ const d=await r.json();if(!d.access_token)throw new Error(d.error_description||d.error||'token refusé');
+ L.dbp_tok=d.access_token;L.dbp_exp=Date.now()+(d.expires_in||3600)*1000;L.dbp_kind='oauth'}catch(e){toast('Connexion échouée : '+e.message)}}
+const hdr=()=>{const h={Authorization:'Bearer '+L.dbp_tok};if(L.dbp_kind==='pat')h['Deriv-App-ID']=L.dbp_app;return h};
+function clearAuth(){['dbp_tok','dbp_exp','dbp_kind','dbp_cur'].forEach(k=>L.removeItem(k));S.accs=[];S.auth=false}
+async function loadAccounts(){if(!L.dbp_tok)return false;if(L.dbp_exp&&Date.now()>+L.dbp_exp){clearAuth();toast('Session expirée : reconnectez-vous');return false}
+ try{const r=await fetch(API+'/trading/v1/options/accounts',{headers:hdr()});const d=await r.json();if(!r.ok)throw new Error((d.errors&&d.errors[0].message)||r.status);
+ const arr=Array.isArray(d.data)?d.data:(d.data&&d.data.accounts)||[];
+ S.accs=arr.map(a=>{const id=a.account_id||a.id||a.loginid;return{id,cur:a.currency||'USD',bal:+a.balance||0,virt:a.is_virtual===true||/demo|virtual/i.test(a.account_type||a.type||'')||/^(DOT|VR)/i.test(id||'')}});
+ if(!S.accs.length)throw new Error('aucun compte trouvé');
+ if(!S.accs.find(a=>a.id===L.dbp_cur))L.dbp_cur=(S.accs.find(a=>a.virt)||S.accs[0]).id;return true}catch(e){toast('Comptes : '+e.message);return false}}
+function drawAcc(){const a=S.accs||[],s=$('#acc');s.style.display=a.length?'':'none';$('#login').style.display=a.length?'none':'';$('#logout').style.display=a.length?'':'none';
+ s.innerHTML=a.map(x=>`<option value="${x.id}">${x.virt?'DÉMO':'RÉEL'} · ${x.id} (${x.cur})</option>`).join('');if(L.dbp_cur)s.value=L.dbp_cur}
+$('#login').onclick=login;
+$('#logout').onclick=()=>{stopBot();clearAuth();drawAcc();$('#bal').textContent='—';$('#typ').innerHTML='';connect()};
+$('#acc').onchange=e=>{if(S.auto){toast('Arrêtez le bot avant de changer de compte');e.target.value=L.dbp_cur;return}L.dbp_cur=e.target.value;connect()};
+$('#tokb').onclick=async()=>{const t=$('#tok').value.trim(),c=$('#appid').value.trim();if(!t||!c){toast('Client ID et token requis');return}L.dbp_app=c;L.dbp_tok=t;L.dbp_kind='pat';L.removeItem('dbp_exp');$('#tok').value='';if(await loadAccounts()){drawAcc();connect()}else clearAuth()};
+// ---------- WebSocket ----------
+function send(o){if(S.ws&&S.ws.readyState===1)S.ws.send(JSON.stringify(o))}
+async function connect(){if(S.ws){S.ws.onclose=null;S.ws.close()}S.D=[];S.P=[];S.busy=false;S.open=null;S.auth=false;
+ let url=WSP,acc=(S.accs||[]).find(a=>a.id===L.dbp_cur);
+ if(acc){try{const r=await fetch(`${API}/trading/v1/options/accounts/${acc.id}/otp`,{method:'POST',headers:hdr()});const d=await r.json();if(!r.ok||!d.data||!d.data.url)throw new Error((d.errors&&d.errors[0].message)||r.status);url=d.data.url;S.cur=acc.cur;S.virt=acc.virt;S.bal=acc.bal}catch(e){toast('OTP : '+e.message);acc=null}}
+ const ws=S.ws=new WebSocket(url);
+ ws.onopen=()=>{setSt(acc?'connecté':'public','#15803d');if(acc){S.auth=true;$('#typ').innerHTML=`<span class="badge ${S.virt?'demo':'reel'}">${S.virt?'DÉMO':'RÉEL'}</span>`;drawBal();send({balance:1,subscribe:1})}subTicks()};
+ ws.onclose=()=>{setSt('reconnexion…','#b45309');setTimeout(()=>{if(S.ws===ws)connect()},3000)};
+ ws.onmessage=m=>onMsg(JSON.parse(m.data))}
+function setSt(t,c){const e=$('#st');e.textContent=t;e.style.background=c}
+function subTicks(){send({forget_all:'ticks'});send({ticks_history:S.sym,end:'latest',count:100,style:'ticks',subscribe:1})}
+$('#sym').onchange=e=>{S.sym=e.target.value;L.dbp_sym=S.sym;S.D=[];S.P=[];subTicks()};
+function pushTick(q,pip){S.pip=pip;S.P.push(q);S.D.push(+q.toFixed(pip).slice(-1));if(S.P.length>100){S.P.shift();S.D.shift()}}
+function onMsg(m){
+ if(m.req_id===777&&m.msg_type==='history'){onPrecHist(m);return}
+ if(m.error){toast(m.error.message||'Erreur API');if(m.msg_type==='buy'||m.msg_type==='proposal'){S.busy=false;if(S.auto)stopBot();drawMan()}return}
+ switch(m.msg_type){
+ case'balance':S.bal=m.balance.balance;S.cur=m.balance.currency;drawBal();break;
+ case'history':S.P=m.history.prices.map(Number);S.pip=m.pip_size||S.pip;S.D=S.P.map(p=>+p.toFixed(S.pip).slice(-1));render();break;
+ case'tick':if(m.tick.symbol===S.sym){pushTick(m.tick.quote,m.tick.pip_size);render();if(S.open&&S.open.cap&&!S.open.sold&&++S.open.held>=S.open.cap){S.open.sold=1;send({sell:S.open.id,price:0})}if(S.auto&&!S.busy)runStrat();if(S.arm)armTick();if(S.mt&&S.mt.on&&!S.busy)mtTick()}break;
+ case'topup_virtual':toast('Compte démo rechargé');getStm();break;
+ case'statement':S.stm=(m.statement&&m.statement.transactions)||[];drawStm();break;
+ case'proposal':send({buy:m.proposal.id,price:m.proposal.ask_price});break;
+ case'buy':S.open={id:m.buy.contract_id,stake:m.buy.buy_price,label:S.lastLabel,t:S.lastT,cap:S.lastT&&S.lastT.cap,held:0};send({proposal_open_contract:1,contract_id:m.buy.contract_id,subscribe:1});S.busy=true;drawMan();break;
+ case'proposal_open_contract':{const c=m.proposal_open_contract;if(S.open&&c.contract_id===S.open.id&&c.is_sold){if(m.subscription)send({forget:m.subscription.id});done(c)}break}}}
+function drawBal(){$('#bal').textContent=S.bal.toFixed(2)+' '+S.cur}
+// ---------- Rendu ----------
+function render(){if(!S.P.length)return;$('#px').textContent=S.P[S.P.length-1].toFixed(S.pip);
+ const f=Array(10).fill(0);S.D.forEach(d=>f[d]++);const mx=Math.max(...f),mn=Math.min(...f),l=S.D[S.D.length-1];
+ $('#dgs').innerHTML=f.map((v,i)=>`<div class="dg ${v===mx?'max':''} ${v===mn?'min':''} ${i===l?'last':''}"><div class="bar"><i style="height:${v/Math.max(mx,1)*100}%"></i></div><b>${i}</b><br>${(v/S.D.length*100).toFixed(0)}%</div>`).join('');
+ $('#chips').innerHTML=S.D.slice(-20).map((d,i,arr)=>`<div class="chip ${d%2?'od':''} ${i===arr.length-1?'ln':''}">${d}</div>`).join('')}
+// ---------- Trades ----------
+function buy(t){if(t.type==='ACCU'&&t.cap==null)t={...t,cap:+$('#at').value||0};if(t.type==='ACCU'&&!(t.cap>0)&&!(+$('#tp').value>0)){toast('Accumulator : indiquez un nombre de ticks ou un take profit');if(S.auto)stopBot();return false}if(!S.auth){toast('Connectez-vous d\'abord');return false}if(S.busy)return false;
+ const stake=t.stake?+(+t.stake).toFixed(2):+(+$('#stake').value*(S.auto?Math.pow(+$('#mg').value||1,S.step):1)).toFixed(2);
+ const p={proposal:1,amount:stake,basis:'stake',contract_type:t.type,currency:S.cur,underlying_symbol:S.sym};
+ if(t.type==='ACCU'){p.growth_rate=+$('#gr').value;if(+$('#tp').value>0)p.limit_order={take_profit:+$('#tp').value}}else{p.duration=Math.min(10,Math.max(t.type==='CALL'||t.type==='PUT'?5:1,t.n||+$('#tk').value||1));p.duration_unit='t';if(t.b!=null)p.barrier=String(t.b)}
+ S.lastT={...t,n:p.duration,gr:p.growth_rate};S.lastLabel=t.type.replace('DIGIT','')+(t.b!=null?' '+t.b:'');S.busy=true;send(p);return true}
+function done(c){const pr=+c.profit,win=pr>0;S.pnl+=pr;S.n++;win?(S.w++,S.ls=0,S.step=0):(S.ls++,S.step=Math.min(S.step+1,+$('#mgm').value));
+ {const o=S.open.t||{},ac=o.type==='ACCU',ed=String(c.exit_tick_display_value||c.exit_tick||'');S.rows.unshift({t:new Date().toLocaleTimeString(),c:(o.type||'').replace('DIGIT',''),b:o.b!=null?o.b:(o.gr?Math.round(o.gr*100)+'%':'—'),n:ac?(c.tick_count||'—'):(o.n||1),o:ac?'—':(o.type==='CALL'||o.type==='PUT')?ed:(ed?ed.slice(-1):'?'),s:S.open.stake,r:pr});if(ac){S.accH.unshift({cap:S.open.cap||0,win,n:+c.tick_count||0});S.accH.length=Math.min(S.accH.length,20);L.dbp_acch=JSON.stringify(S.accH)}}if(S.rows.length>200)S.rows.pop();S.open=null;S.busy=false;beep(win);flash(win);drawStats();drawMan();getStm();precRepeat();sd();mtDone(win,pr);
+ if(S.auto){if(S.pnl<=-Math.abs(+$('#sl').value)){stopBot();toast('Stop loss atteint')}else if(S.pnl>=+$('#tpS').value){stopBot();toast('Objectif atteint 🎯')}else if(S.n>=+$('#mx').value){stopBot();toast('Nombre max de trades atteint')}else if(S.ls>=(+$('#ml').value||99)){stopBot();toast('Série de pertes atteinte : bot arrêté')}}}
+function drawStats(){const e=$('#spnl');e.textContent=S.pnl.toFixed(2);e.className=S.pnl>=0?'pos':'neg';$('#strd').textContent=S.n;$('#swr').textContent=(S.n?Math.round(S.w/S.n*100):0)+'%';$('#sstk').textContent=S.ls;
+ $('#log').innerHTML=S.rows.map(rowTr).join('')}
+$('#rst').onclick=()=>{S.pnl=S.n=S.w=S.ls=S.step=0;S.rows=[];drawStats()};
+$('#csv').onclick=()=>{const t='heure,contrat,chiffre_choisi,ticks,chiffre_sorti,mise,resultat\n'+S.rows.map(r=>[r.t,r.c,r.b,r.n,r.o,r.s,r.r].join(',')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t]));a.download='trades.csv';a.click()};
+// ---------- Manuel ----------
+function drawMan(){const f=$('#fam').value,b=$('#bar').value,d=S.busy;let h='';
+ if(f==='ou')h=`<button class="g" ${d?'disabled':''} data-t="DIGITOVER">Over ${b}</button><button class="r" ${d?'disabled':''} data-t="DIGITUNDER">Under ${b}</button>`;
+ if(f==='md')h=`<button class="g" ${d?'disabled':''} data-t="DIGITMATCH">Match ${b}</button><button class="r" ${d?'disabled':''} data-t="DIGITDIFF">Differ ${b}</button>`;
+ if(f==='acc')h=`<button class="g" ${d?'disabled':''} data-t="ACCU">Acheter Accumulator</button><button ${S.open&&S.open.label==='ACCU'?'':'disabled'} id="sell">Vendre</button>`;
+ if(f==='cb')h=`<button class="g" ${d?'disabled':''} data-t="CALL">Rise ▲</button><button class="r" ${d?'disabled':''} data-t="PUT">Fall ▼</button>`;
+ $('#mBtns').innerHTML=h;$('#bRow').style.display=f==='acc'?'none':'';$('#aRow').style.display=f==='acc'?'':'none';$('#atRow').style.display=f==='acc'?'':'none';
+ document.querySelectorAll('#mBtns [data-t]').forEach(x=>x.onclick=()=>buy({type:x.dataset.t,b:['ACCU','CALL','PUT'].includes(x.dataset.t)?null:+$('#bar').value}));
+ const s=$('#sell');if(s)s.onclick=()=>send({sell:S.open.id,price:0})}
+['fam','bar'].forEach(i=>$('#'+i).oninput=drawMan);
+// ---------- Stratégies ----------
+S.accH=JSON.parse(L.dbp_acch||'[]');
+function smartCap(){const h=S.accH;if(!h.length)return 4;const b=Math.min(6,Math.max(3,h[0].cap||4));if(h[0].win){const i=h.findIndex(x=>!x.win),k=i<0?h.length:i;return Math.min(6,b+(k>=2?1:0))}return Math.max(3,b-1)}
+const cbOk=()=>/^(CRASH|BOOM)/.test(S.sym)&&S.P.length>=50,isC=()=>/^CRASH/.test(S.sym);
+const sm=()=>S.P.slice(1).map((p,i)=>p-S.P[i]),CALL={type:'CALL'},PUT={type:'PUT'};
+const spk=k=>{const m=sm(),a=avg(m.map(Math.abs));return m.slice(-k).some(x=>Math.abs(x)>6*a)};
+const dirTrend=()=>isC()?CALL:PUT;
+const frq=()=>{const f=Array(10).fill(0);S.D.forEach(d=>f[d]++);return f.map(v=>v/S.D.length*100)};
+const sh=(n,fn)=>{const a=S.D.slice(-n);return a.filter(fn).length/(a.length||1)*100};
+const mvs=()=>S.P.slice(1).map((p,i)=>Math.abs(p-S.P[i]));const avg=a=>a.reduce((x,y)=>x+y,0)/(a.length||1);
+const OV=(b)=>({type:'DIGITOVER',b}),UN=(b)=>({type:'DIGITUNDER',b}),DF=b=>({type:'DIGITDIFF',b}),MT=b=>({type:'DIGITMATCH',b});
+const STR={
+ ou:{
+  a:{n:'1 · Over 2 après 3 chiffres bas',d:'Si les 3 derniers chiffres sont ≤2 → Over 2 (≈70%).',f:()=>S.D.slice(-3).every(d=>d<=2)&&OV(2)},
+  b:{n:'2 · Under 7 après 3 chiffres hauts',d:'Si les 3 derniers chiffres sont ≥7 → Under 7 (≈70%).',f:()=>S.D.slice(-3).every(d=>d>=7)&&UN(7)},
+  c:{n:'3 · Over 3 — dominante haute',d:'Si ≥65% des 30 derniers chiffres sont >3 → Over 3 (≈60%).',f:()=>S.D.length>=30&&sh(30,d=>d>3)>=65&&OV(3)},
+  d:{n:'4 · Under 6 — dominante basse',d:'Si ≥65% des 30 derniers chiffres sont <6 → Under 6 (≈60%).',f:()=>S.D.length>=30&&sh(30,d=>d<6)>=65&&UN(6)},
+  e:{n:'5 · Extrêmes : Over 1 / Under 8',d:'2 chiffres ≤1 → Over 1 (≈80%) ; 2 chiffres ≥8 → Under 8 (≈80%).',f:()=>{const l=S.D.slice(-2);return l.every(d=>d<=1)?OV(1):l.every(d=>d>=8)?UN(8):0}}},
+ md:{
+  a:{n:'1 · Differ — chiffre le plus rare',d:'Differ sur le chiffre <7% des 100 derniers ticks (≈90%).',f:()=>{if(S.D.length<60)return 0;const f=frq(),m=Math.min(...f);return m<7&&DF(f.indexOf(m))}},
+  b:{n:'2 · Differ — chiffre répété',d:'Si le même chiffre sort 2 fois de suite → Differ sur ce chiffre (≈90%).',f:()=>{const l=S.D.slice(-2);return l.length===2&&l[0]===l[1]&&DF(l[1])}},
+  c:{n:'3 · Differ — chiffre absent',d:'Differ sur un chiffre absent des 20 derniers ticks (≈90%).',f:()=>{const l=S.D.slice(-20);if(l.length<20)return 0;const i=[0,1,2,3,4,5,6,7,8,9].find(d=>!l.includes(d));return i!==undefined&&DF(i)}},
+  d:{n:'4 · Match — chiffre dominant',d:'Match sur un chiffre ≥15% qui vient de sortir (gain ×9, ≈10%, risqué).',f:()=>{if(S.D.length<60)return 0;const f=frq(),m=Math.max(...f),i=f.indexOf(m);return m>=15&&S.D[S.D.length-1]===i&&MT(i)}},
+  e:{n:'5 · Match — chiffre en retard',d:'Match sur un chiffre absent depuis 30 ticks (≈10%, risqué).',f:()=>{const l=S.D.slice(-30);if(l.length<30)return 0;const i=[0,1,2,3,4,5,6,7,8,9].find(d=>!l.includes(d));return i!==undefined&&MT(i)}}},
+ acc:{
+  a:{n:'1 · Marché calme (6 ticks)',d:'Entre quand les 6 derniers mouvements sont faibles vs la moyenne.',f:()=>S.P.length>=50&&Math.max(...mvs().slice(-6))<avg(mvs())*.9&&{type:'ACCU'}},
+  b:{n:'2 · Calme strict (10 ticks)',d:'Les 10 derniers mouvements sont tous sous la moyenne (plus rare, plus sûr).',f:()=>S.P.length>=50&&Math.max(...mvs().slice(-10))<avg(mvs())&&{type:'ACCU'}},
+  c:{n:'3 · Après un pic de volatilité',d:'Un gros mouvement a eu lieu il y a 6-12 ticks et les 5 derniers sont calmes.',f:()=>{if(S.P.length<50)return 0;const m=mvs(),a=avg(m);return Math.max(...m.slice(-12,-5))>2.2*a&&Math.max(...m.slice(-5))<a&&{type:'ACCU'}}},
+  d:{n:'4 · Mouvement moyen faible',d:'Moyenne des 8 derniers mouvements < 60% de la moyenne globale.',f:()=>S.P.length>=50&&avg(mvs().slice(-8))<avg(mvs())*.6&&{type:'ACCU'}},
+  e:{n:'5 · Micro-range',d:'Amplitude des 10 derniers prix < 3× le mouvement moyen.',f:()=>{if(S.P.length<50)return 0;const l=S.P.slice(-10);return Math.max(...l)-Math.min(...l)<3*avg(mvs())&&{type:'ACCU'}}},
+  f:{n:'6 · Début 3–6 ticks adaptatif',d:'Entre dès la fin du précédent Accumulator et sort après 3 à 6 ticks : +1 tick après 2 gains d\'affilée, -1 après une perte.',f:()=>({type:'ACCU',cap:smartCap()})}},
+ cb:{
+  a:{n:'1 · Après spike : suivre la dérive',d:'Après un spike (mouvement >6× la moyenne) dans les 3 derniers ticks : Crash → Rise, Boom → Fall. Choisissez un marché Crash ou Boom.',f:()=>cbOk()&&spk(3)&&dirTrend()},
+  b:{n:'2 · Rebond après grosse variation',d:'Crash : après une chute >2× la moyenne → Rise. Boom : après une hausse >2× la moyenne → Fall.',f:()=>{if(!cbOk())return 0;const m=sm(),l=m[m.length-1],a=avg(m.map(Math.abs));return isC()?(l<-2*a&&CALL):(l>2*a&&PUT)}},
+  c:{n:'3 · Dérive : 5 ticks dans le sens',d:'Crash : 5 ticks montants de suite → Rise. Boom : 5 ticks descendants → Fall.',f:()=>{if(!cbOk())return 0;const l=sm().slice(-5);return isC()?(l.every(x=>x>0)&&CALL):(l.every(x=>x<0)&&PUT)}},
+  d:{n:'4 · Momentum 3 ticks',d:'3 mouvements dans le même sens → on suit (Rise si hausse, Fall si baisse).',f:()=>{if(!cbOk())return 0;const l=sm().slice(-3);return l.every(x=>x>0)?CALL:l.every(x=>x<0)?PUT:0}},
+  e:{n:'5 · Spike en retard (risqué)',d:'Aucun spike sur les 100 derniers ticks : Crash → Fall, Boom → Rise, en pariant sur un spike proche.',f:()=>cbOk()&&S.P.length>=100&&!spk(99)&&(isC()?PUT:CALL)}}};
+function fillStrat(){const f=$('#fam').value;$('#strat').innerHTML=Object.entries(STR[f]).map(([k,v])=>`<option value="${k}">${v.n}</option>`).join('');sd()}
+const sd=()=>{const s=STR[$('#fam').value][$('#strat').value];$('#sdesc').textContent=s?s.d+(($('#fam').value==='acc'&&$('#strat').value==='f')?' Prochain : '+smartCap()+' ticks.':''):''};$('#strat').onchange=sd;$('#fam').addEventListener('input',()=>{if($('#fam').value==='cb'&&!/^(CRASH|BOOM)/.test(S.sym)){$('#sym').value='CRASH1000';$('#sym').onchange({target:$('#sym')})}fillStrat()});fillStrat();
+function runStrat(){const t=STR[$('#fam').value][$('#strat').value].f();if(t)buy(t)}
+function startBot(){if(!S.auth){toast('Connectez-vous d\'abord');return}if(!S.virt&&!confirm('Compte RÉEL : le bot va trader avec de l\'argent réel. Continuer ?'))return;armOff();mtStop();S.auto=true;$('#go').textContent='■ Arrêter le bot';$('#go').className='r'}
+function stopBot(){S.auto=false;$('#go').textContent='▶ Démarrer le bot';$('#go').className='g'}
+$('#go').onclick=()=>S.auto?stopBot():startBot();
+function mode(a){$('#manual').style.display=a?'none':'';$('#auto').style.display=a?'':'none';$('#tM').className=a?'':'on';$('#tA').className=a?'on':'';if(!a)stopBot()}
+$('#tM').onclick=()=>mode(0);$('#tA').onclick=()=>mode(1);
+$('#appid').onchange=()=>{L.dbp_app=$('#appid').value.trim()};
+(async()=>{await callback();if(await loadAccounts())drawAcc();drawMan();drawStats();connect()})();
+// ---------- Précision ----------
+const TS=()=>/^(1HZ|BOOM|CRASH)/.test(S.sym)?1:2;
+const AVG=(P,i)=>{let s=0,c=0;for(let k=Math.max(1,i-60);k<=i;k++){s+=Math.abs(P[k]-P[k-1]);c++}return s/(c||1)};
+const PSIG={over:(D,i,d)=>D[i]<=d&&D[i-1]<=d,under:(D,i,d)=>D[i]>=d&&D[i-1]>=d,match:(D,i,d)=>!D.slice(i-14,i+1).includes(d),differ:(D,i,d)=>D[i]===d,
+ accu:(D,i,d,P)=>{let m=0;for(let k=i-5;k<=i;k++)m=Math.max(m,Math.abs(P[k]-P[k-1]));return m<AVG(P,i)*.9}};
+function pwin(c,D,P,i,n,d){const x=D[i+n];if(c==='over')return x>d;if(c==='under')return x<d;if(c==='match')return x===d;if(c==='differ')return x!==d;let m=0;for(let k=i+1;k<=i+10;k++)m=Math.max(m,Math.abs(P[k]-P[k-1]));return m<2*AVG(P,i)}
+const ptrade=(c,d)=>c==='accu'?{type:'ACCU',cap:S.arm?S.arm.hi:6}:{type:{over:'DIGITOVER',under:'DIGITUNDER',match:'DIGITMATCH',differ:'DIGITDIFF'}[c],b:d};
+function precAccu(m){const P=m.history.prices.map(Number),pip=m.pip_size||S.pip,D=P.map(p=>+p.toFixed(pip).slice(-1)),gr=+$('#pg').value;
+ const mv=[0];for(let k=1;k<P.length;k++)mv.push(Math.abs(P[k]-P[k-1]));
+ const srt=mv.slice(1).sort((a,b)=>a-b),dist=srt[Math.floor(1/(1+gr)*(srt.length-1))];
+ const run=i=>{let r=0;for(let k=i+1;k<P.length&&r<60;k++){if(mv[k]<=dist)r++;else break}return r};
+ const sig=[],all=[],on=[];let prev=false;
+ for(let i=16;i<P.length-61;i++){const r=run(i),s=PSIG.accu(D,i,0,P);all.push(r);if(s){sig.push(r);if(!prev)on.push(i)}prev=s}
+ if(on.length<3||sig.length<5){$('#pres').textContent='Signal trop rare sur cet échantillon : essayez une autre croissance ou un autre marché.';return}
+ const q=(a,p)=>[...a].sort((x,y)=>x-y)[Math.floor(p*(a.length-1))],cl=(v,a,b)=>Math.min(b,Math.max(a,v));
+ const g=on.slice(1).map((x,k)=>x-on[k]).sort((a,b)=>a-b),N=Math.max(1,g[Math.floor(g.length/2)]);
+ const hi=cl(q(sig,.25),3,6),lo=cl(q(sig,.1),3,hi),ok=sig.filter(r=>r>=hi).length/sig.length*100,base=all.filter(r=>r>=hi).length/all.length*100;
+ S.pr={c:'accu',d:0,n:1,N,gr,hi,lo};$('#parm').disabled=false;
+ $('#pres').innerHTML=`Accumulator ${Math.round(gr*100)}% : signal environ tous les <b>${N} ticks (≈ ${N*TS()} s)</b>.<br>Annonce : <b>entre ${lo} et ${hi} ticks maximum</b> ; sortie automatique à ${hi} ticks.<br>Sur ${all.length} ticks analysés, tenir ${hi} ticks a réussi <b>${ok.toFixed(0)}%</b> après signal contre <b>${base.toFixed(0)}%</b> sans signal (estimation : la barrière réelle de Deriv peut différer).`;
+ if(S.autoArm)armOn()}
+function precStart(auto){if(!S.ws||S.ws.readyState!==1){toast('Pas de connexion');return}S.autoArm=!!auto;$('#pres').textContent='Calcul en cours…';send({ticks_history:S.sym,end:'latest',count:1000,style:'ticks',req_id:777})}
+function onPrecHist(m){if($('#pc').value==='accu')return precAccu(m);const P=m.history.prices.map(Number),pip=m.pip_size||S.pip,D=P.map(p=>+p.toFixed(pip).slice(-1));
+ const c=$('#pc').value,d=+$('#pd').value,n=Math.max(1,Math.min(10,+$('#tk').value||1)),f=PSIG[c],on=[];let prev=false,w=0,t=0,aw=0,al=0;
+ for(let i=16;i<D.length-12;i++){const s=f(D,i,d,P),win=pwin(c,D,P,i,n,d);al++;if(win)aw++;if(s){t++;if(win)w++;if(!prev)on.push(i)}prev=s}
+ if(on.length<3){$('#pres').textContent='Signal trop rare sur cet échantillon : choisissez un autre chiffre.';return}
+ const g=on.slice(1).map((x,k)=>x-on[k]).sort((a,b)=>a-b),N=Math.max(1,g[Math.floor(g.length/2)]);
+ S.pr={c,d,n,N};$('#parm').disabled=false;
+ $('#pres').innerHTML=`Signal observé environ tous les <b>${N} ticks (≈ ${N*TS()} s)</b>. Sur ${al} ticks analysés : réussite après signal <b>${(w/t*100).toFixed(1)}%</b> (${w}/${t}) contre <b>${(aw/al*100).toFixed(1)}%</b> sans signal (taux théorique du contrat : ${({over:(9-d)*10,under:d*10,match:10,differ:90})[c]}%).<br><i>Sur les indices synthétiques, l'écart est dû au hasard : ce n'est pas une garantie.</i>`;
+ if(S.autoArm)armOn()}
+function armOn(){if(!S.pr)return;if(S.auto)stopBot();S.arm={...S.pr,left:S.pr.N};S.prepOn=$('#prep').checked;$('#pstop').disabled=false;armTxt()}
+function armOff(){S.arm=null;S.prepOn=false;S.autoArm=false;$('#pstop').disabled=true;$('#pst').textContent=''}
+function armTxt(){const a=S.arm;if(a)$('#pst').textContent=a.left>0?`Trade dans ${a.left} ticks (≈ ${a.left*TS()} s)`:'Compte à rebours terminé : attente du signal…'}
+function armTick(){const a=S.arm;if(a.left>0)a.left--;armTxt();if(a.left>0||S.busy||!S.auth)return;
+ if(PSIG[a.c](S.D,S.D.length-1,a.d,S.P)){$('#pst').textContent=a.c==='accu'?`Signal atteint : Accumulator lancé (sortie après ${a.hi} ticks max)`:'Signal atteint : trade lancé';if(a.c==='accu')$('#gr').value=a.gr.toFixed(2);const t=ptrade(a.c,a.d);S.arm=null;$('#pstop').disabled=true;buy(t)}}
+function precRepeat(){if(!S.prepOn||S.arm)return;if(S.pnl<=-Math.abs(+$('#sl').value)||S.pnl>=+$('#tpS').value||S.ls>=(+$('#ml').value||99)){armOff();toast('Limite de session atteinte : répétition arrêtée');return}precStart(true)}
+$('#pc').onchange=()=>{const a=$('#pc').value==='accu';$('#pdW').style.display=a?'none':'';$('#pgW').style.display=a?'':'none';$('#parm').disabled=true;$('#pres').textContent=''};
+const pq=(c,d)=>{$('#pc').value=c;$('#pc').onchange();$('#pd').value=d;precStart(false)};$('#pO3').onclick=()=>pq('over',3);$('#pU7').onclick=()=>pq('under',7);$('#pDF').onclick=()=>{const f=frq(),m=Math.min(...f);pq('differ',f.indexOf(m))};
+$('#pcalc').onclick=()=>precStart(false);$('#parm').onclick=armOn;$('#pstop').onclick=armOff;
+function rowTr(r){const k=r.r>0?'pos':'neg';return `<tr><td>${r.t}</td><td>${r.c}</td><td>${r.b}</td><td>${r.n}</td><td class="${k}"><b>${r.o}</b></td><td>${r.s}</td><td class="${k}">${r.r>0?'Gagné +':'Perdu '}${r.r.toFixed(2)}</td></tr>`}
+function flash(w){const e=$('#bal');e.classList.remove('fw','fl');void e.offsetWidth;e.classList.add(w?'fw':'fl')}
+document.querySelectorAll('.card h3').forEach(h=>h.onclick=()=>h.parentElement.classList.toggle('fold'));
+// ---------- Montante ----------
+S.mtRows=[];
+const mtP=(c,d)=>({over:(9-d)/10,under:d/10,differ:.9,match:.1})[c];
+const mtHit=(c,d,x)=>c==='over'?x>d:c==='under'?x<d:c==='differ'?x!==d:x===d;
+const MTT={over:'DIGITOVER',under:'DIGITUNDER',differ:'DIGITDIFF',match:'DIGITMATCH'};
+const MTC=(()=>{const a=[];[0,1,2].forEach(d=>a.push(['over',d]));[7,8,9].forEach(d=>a.push(['under',d]));for(let d=0;d<10;d++)a.push(['differ',d]);return a})();
+function mtBest(force,thr){const w=S.D.slice(-30);let b=null;MTC.forEach(([c,d])=>{const p=mtP(c,d),r=w.filter(x=>mtHit(c,d,x)).length/w.length*100,sc=r/(p*100);if(!force&&r<thr)return;if(!b||sc>b.sc)b={c,d,r,sc}});return b}
+const mtLab=(c,d)=>c.toUpperCase()+' '+d;
+function mtDraw(){const m=S.mt,a=$('#mmode').value==='auto',p=mtP($('#mc').value,+$('#md').value);
+ $('#mtP').innerHTML=a?'Mode auto : le logiciel analyse et choisit le contrat et le chiffre (uniquement des contrats ≥ 70 %).':`Probabilité théorique : <b class="${p>=.7?'pos':'neg'}">${Math.round(p*100)} %</b> ${p>=.7?'✔ (≥ 70 %)':'✖ trop faible : changez de chiffre ou de contrat'}`;
+ let l='Montante inactive.';if(m){const left=m.on?Math.max(0,Math.round(m.wmax-(Date.now()-m.ws)/1000)):0;
+  l=`Mise actuelle : <b>${m.stake.toFixed(2)}</b> · palier ${m.step}/${m.max} · gain de la montante : <b class="${m.run>=0?'pos':'neg'}">${m.run.toFixed(2)}</b><br>Winrate récent (30 ticks) : <b>${Math.round(m.rate||0)} %</b>${m.auto&&m.pick?` · choix : <b>${mtLab(m.pick.c,m.pick.d)}</b>`:''}${m.on?`<br>Prochain trade au plus tard dans <b>${left} s</b>`:' · arrêtée'}`}
+ $('#mtL').innerHTML=l}
+function mtHist(){$('#mHist').innerHTML=S.mtRows.map(r=>{const k=r.r>0?'pos':'neg';return `<tr><td>${r.t}</td><td>${r.c}</td><td>${r.b}</td><td class="${k}"><b>${r.o}</b></td><td>${r.s}</td><td>${r.p}</td><td class="${k}">${r.r>0?'Gagné +':'Perdu '}${r.r.toFixed(2)}${r.f}</td></tr>`}).join('')||'<tr><td colspan="7">Aucun trade de montante</td></tr>'}
+function mtMode(){const a=$('#mmode').value==='auto';['mc','md'].forEach(i=>$('#'+i).disabled=a);document.querySelectorAll('#mpre button').forEach(b=>b.disabled=a);mtDraw()}
+function mtStop(){if(S.mt)S.mt.on=false;$('#mgo').textContent='▶ Lancer la montante';$('#mgo').className='g';mtDraw()}
+function mtTick(){const m=S.mt,w=S.D.slice(-30);if(w.length<30||!S.auth)return;const force=(Date.now()-m.ws)/1000>=m.wmax;let c=m.c,d=m.d,r;
+ if(m.auto){const b=mtBest(force,m.thr);m.pick=b;m.rate=b?b.r:0;if(!b){mtDraw();return}c=b.c;d=b.d;r=b.r}
+ else{r=w.filter(x=>mtHit(c,d,x)).length/30*100;m.rate=r;if(r<m.thr&&!force){mtDraw();return}}
+ m.cur={forced:force};if(buy({type:MTT[c],b:d,stake:m.stake,n:m.n,mt:true}))m.ws=Date.now();mtDraw()}
+function mtDone(win,pr){const m=S.mt;if(!m||!m.on||!(S.lastT&&S.lastT.mt))return;const g=S.rows[0]||{},st=m.step+1;
+ S.mtRows.unshift({t:g.t,c:g.c,b:g.b,n:g.n,o:g.o,s:g.s,p:st,r:pr,f:m.cur&&m.cur.forced?' ⏱':''});if(S.mtRows.length>200)S.mtRows.pop();
+ if(win){m.stake=+(m.stake+pr).toFixed(2);m.step++;m.run+=pr;if(m.step>=m.max){toast('Montante réussie : palier atteint, mise remise au départ');m.stake=m.base;m.step=0}}else{m.stake=m.base;m.step=0;m.run=0}
+ m.ws=Date.now();if(S.pnl<=-Math.abs(+$('#msl').value||1e9)){mtStop();toast('Stop loss atteint')}mtHist();mtDraw()}
+$('#mgo').onclick=()=>{if(S.mt&&S.mt.on){mtStop();return}const auto=$('#mmode').value==='auto',c=$('#mc').value,d=+$('#md').value;
+ if(!S.auth){toast('Connectez-vous d\'abord');return}if(!auto&&mtP(c,d)<.7){toast('Probabilité inférieure à 70 % : choisissez un autre contrat');return}
+ if(!S.virt&&!confirm('Compte RÉEL : la montante va trader avec de l\'argent réel. Continuer ?'))return;
+ stopBot();armOff();const b=+$('#mb').value||1;S.mt={on:true,auto,c,d,base:b,stake:b,step:0,max:Math.max(1,+$('#mm').value||5),thr:+$('#mw').value||70,n:Math.max(1,Math.min(10,+$('#mn').value||1)),run:0,rate:0,ws:Date.now(),wmax:Math.min(90,Math.max(10,+$('#mwt').value||90))};
+ $('#mgo').textContent='■ Arrêter la montante';$('#mgo').className='r';mtDraw()};
+['mc','md'].forEach(i=>$('#'+i).oninput=mtDraw);$('#mmode').onchange=mtMode;
+document.querySelectorAll('#mpre button').forEach(b=>b.onclick=()=>{$('#mc').value=b.dataset.c;$('#md').value=b.dataset.d;mtDraw()});mtMode();mtHist();
+// ---------- Vues, caisse, historique ----------
+const CASHIER='https://home.deriv.com/dashboard';
+const ty=a=>({buy:'Achat',sell:'Vente',deposit:'Dépôt',withdrawal:'Retrait',transfer:'Transfert'}[a]||a||'—');
+function getStm(){if(S.auth)send({statement:1,limit:100,description:1})}
+function rowsOf(list){return list.map(t=>{const a=+t.amount;return `<tr><td>${t.transaction_time?new Date(t.transaction_time*1000).toLocaleString():''}</td><td>${ty(t.action_type)}</td><td style="max-width:240px">${(t.longcode||t.description||'').slice(0,90)}</td><td class="${a>=0?'pos':'neg'}">${a>0?'+':''}${a.toFixed(2)}</td><td>${(+t.balance_after||0).toFixed(2)}</td></tr>`}).join('')||'<tr><td colspan="5">Aucune transaction (connectez-vous)</td></tr>'}
+function drawStm(){const l=S.stm||[];$('#hAll').innerHTML=rowsOf(l);$('#cTx').innerHTML=rowsOf(l.filter(t=>/deposit|withdraw|transfer/.test(t.action_type||'')));
+ $('#hSes').innerHTML=S.rows.map(rowTr).join('');$('#cBal').textContent=$('#bal').textContent}
+function view(v){['T','M','C','H'].forEach(k=>{$('#v'+k).style.display=k===v?'':'none';$('#n'+k).className=k===v?'on':''});if(v!=='T'){getStm();drawStm()}}
+['T','M','C','H'].forEach(k=>$('#n'+k).onclick=()=>view(k));$('#cTop').onclick=()=>{if(!S.auth){toast('Connectez-vous d\'abord');return}if(!S.virt){toast('Réservé au compte démo : changez de compte');return}send({topup_virtual:1})};
+$('#cOpen').onclick=()=>window.open(CASHIER,'_blank');
+$('#hcsv').onclick=()=>{const t='date,type,description,montant,solde\n'+(S.stm||[]).map(x=>[x.transaction_time?new Date(x.transaction_time*1000).toISOString():'',ty(x.action_type),'"'+(x.longcode||'').replace(/"/g,"'")+'"',x.amount,x.balance_after].join(',')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t]));a.download='historique.csv';a.click()};
+
+</script></body></html>
